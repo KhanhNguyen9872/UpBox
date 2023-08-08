@@ -36,9 +36,9 @@ class main:
         self.entry_token.place_forget()
         self.entry_token.place(x=90,y=14)
         
-        self.button_token = tkinter.Button(self.tk, text = "Check", command = lambda: self.check_token(self.token.get()), background=self.blue, foreground=self.white)
+        self.button_token = tkinter.Button(self.tk, text = "Login", command = lambda: self.check_token(self.token.get()), background=self.blue, foreground=self.white)
         self.button_token.place_forget()
-        self.button_token.place(x=435,y=10)
+        self.button_token.place(x=440,y=10)
         
         
         # Bind keyboard
@@ -49,6 +49,7 @@ class main:
         self.tk.mainloop()
         
     def main_program(self):
+        ## main
         self.tk = tkinter.Tk()
         self.tk.title = "UpBox"
         self.tk.geometry(self.center_screen(500, 45, self.tk))
