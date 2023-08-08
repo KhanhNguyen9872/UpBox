@@ -149,7 +149,7 @@ def load_data():
         verify = False,
     ).text
     if query[:3] == "404":
-        query = create_file('upbox.json', json.dumps(data.default_json()))
+        query = create_file('upbox.json', json.dumps(data.default_json(data.username, data.token)))
         if query[0]:
             query = data.default_json()
         else:
