@@ -5,18 +5,19 @@ class data:
     def __init__(self):
         self.token = ''
         self.username = ''
+        self.storage_data = ''
     def main_repo(self):
         return 'storage'
-    def default_json(self, username, token):
+    def program_name(self):
+        return 'UpBox'
+    def default_json(self):
         return \
         {
-            'name_storage': 'upbox',
+            'name_storage': self.program_name().lower(),
             'version': '1.0.0',
-            'username': str(username),
-            'token': str(token),
-            'file' : {
-                'upbox.txt': 'https://github.com/download/upbox.txt|sha'
-            },
+            'username': str(self.username),
+            'repo': str(self.main_repo()),
+            'file' : {},
         }
 
 
