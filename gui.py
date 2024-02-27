@@ -5,6 +5,7 @@ if __name__=='__main__':
 import tkinter, lib
 from tkinter import filedialog
 from tkinter import scrolledtext
+from tkinter import messagebox
 
 try:
     import config
@@ -89,7 +90,15 @@ class main:
         
     def view_file(self):
         for item in self.selected_data.get().split(","):
+            try:
+                size = float(item.split("-")[0].strip().split(" ")[0])
+            except IndexError:
+                size = 0.0
             item = "-".join(item.split("-")[1:])[1:]
+            if (size > 5120.0):
+                lib.debug("Cannot view file larger than 5 MB")
+                messagebox.showerror("Error", "Cannot view file {file}\nFile larger than 5 MB! You need download it before view!".format(file = item))
+                continue
             if item:
                 lib.threading.Thread(target=self.showTextBox, args=(item,)).start()
         self.reload_listfile()
@@ -97,7 +106,15 @@ class main:
 
     def open_file(self):
         for item in self.selected_data.get().split(","):
+            try:
+                size = float(item.split("-")[0].split(" ")[0])
+            except IndexError:
+                size = 0.0
             item = "-".join(item.split("-")[1:])[1:]
+            if (size > 262144.0):
+                lib.debug("Cannot directly open file larger than 256 MB")
+                messagebox.showerror("Error", "Cannot open file {file}\nFile larger than 256 MB! You need download it before open!".format(file = item))
+                continue
             if item:
                 lib.threading.Thread(target=self.openFileCMD, args=(item,)).start()
         self.reload_listfile()
