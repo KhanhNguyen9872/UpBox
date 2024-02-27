@@ -2,7 +2,15 @@ import sys
 if __name__=='__main__':
     sys.exit()
 
-import os, threading, subprocess, tkinter, config, lib, time
+import tkinter, lib
+from tkinter import filedialog
+from tkinter import scrolledtext
+
+try:
+    import config
+except (ImportError, ModuleNotFoundError):
+    open("config.py", "w").write()
+    import config
 
 class TextBox:
     def __init__(self, textbox):
@@ -70,18 +78,178 @@ class main:
         # self.tk.attributes('-disabled', True)
         self.tk.mainloop()
         
+    def get_items(self, event):
+        selected_indices = self.list_file.curselection()
+        return [self.list_file.get(idx) for idx in selected_indices]
+    
+    def on_select(self, event):
+        selected_items = self.get_items(event)
+        self.selected_data.set(", ".join(selected_items))
+        return
+        
+    def view_file(self):
+        for item in self.selected_data.get().split(","):
+            item = "-".join(item.split("-")[1:])[1:]
+            if item:
+                lib.threading.Thread(target=self.showTextBox, args=(item,)).start()
+        self.reload_listfile()
+        return
+
+    def open_file(self):
+        for item in self.selected_data.get().split(","):
+            item = "-".join(item.split("-")[1:])[1:]
+            if item:
+                lib.threading.Thread(target=self.openFileCMD, args=(item,)).start()
+        self.reload_listfile()
+        return
+    
+    def choose_folder(self):
+        folder_path = filedialog.askdirectory()
+        if folder_path:
+            return folder_path
+        else:
+            return False
+        
+    def choose_file(self):
+        file = filedialog.askopenfilename()
+        if file:
+            return file
+        else:
+            return False
+        
+    def upload_progress(self, file):
+        if file:
+            file_name = "/".join(file.split("\\")).split("/")[-1]
+            lib.upload_file_release(file)
+            lib.update_data("add", file_name)
+            self.reload_listfile()
+        return
+        
+    def upload_file(self):
+        file = self.choose_file()
+        if (file != False):
+            lib.threading.Thread(target=self.upload_progress, args=(file, )).start()
+        return
+    
+    def delete_file(self):
+        listFile = self.selected_data.get().split(",")
+        for item in listFile:
+            item = "-".join(item.split("-")[1:])[1:]
+            if item:
+                lib.remove_file_release(item)
+                lib.update_data('del', item)
+                self.reload_listfile()
+        
+    def download_file(self):
+        path = self.choose_folder()
+        if (path != False):
+            fullItems = self.selected_data.get().split(",")
+            for item in fullItems:
+                item = "-".join(item.split("-")[1:])[1:]
+                if item:
+                    data = lib.get_data_from_release(item)
+                    if (data[0] == 404):
+                        return
+                    open("{path}/{item}".format(path = path, item = item), "wb").write(data[1])
+        self.reload_listfile()
+        return
+
+    def openFileCMD(self, item):
+        data = lib.get_data_from_release(item)
+        if (data[0] == 404):
+            return
+        
+        path = "{tmp}\\{folder}".format(tmp = lib.tmp_path, folder = lib.random_str(48))
+        lib.os.mkdir(path)
+        open("{path}\\{item}".format(path = path, item = item), 'wb').write(data[1])
+        lib.os.system("\"{path}\\{item}\"".format(path = path, item = item))
+        lib.time.sleep(5)
+        lib.shutil.rmtree(path)
+        return
+            
+    def showTextBox(self, item):
+        data = lib.get_data_from_release(item)
+        if (data[0] == 404):
+            data[1] == "Network ERROR!"
+        
+        root = tkinter.Tk()
+        root.title(item)
+
+        text_area = scrolledtext.ScrolledText(root, wrap=tkinter.WORD, width=100, height=30)
+        text_area.pack(expand=True, fill="both")
+
+        scrollbar = tkinter.Scrollbar(root, command=text_area.yview)
+        scrollbar.pack(side="right", fill="y")
+
+        text_area.config(yscrollcommand=scrollbar.set)
+        text_area.insert(tkinter.END, data[1])
+        text_area.config(state='disabled')
+
+        root.mainloop()
+        
+    def reload_listfile(self):
+        self.list_file.delete(0, tkinter.END)
+        lst = lib.get_list_file()
+        lib.debug(lib.get_data())
+        for name in lst:
+            print(name)
+            print(lst[name])
+            if(lst[name] == "file"):
+                name = str(round(int(lib.json.loads(lib.get_data()['file'][name])['info']['0'].split("|")[2]) / 1024, 2)) + " kb - " + name
+                self.list_file.insert(tkinter.END, name)
+        return
+        
     def main_program(self):
         ## main
+        # release_id = lib.create_release("1")
+        # lib.upload_file_release("data.py", release_id)
+        # lib.delete_release("1")
+        # lib.delete_tag("1")
+        # release_id = lib.create_release()
+        # lib.upload_file_release("data.py", release_id)
+        # lib.update_data('del', "data.py")
         self.tk = tkinter.Tk()
         self.tk.title(lib.program_name())
         self.tk.geometry(self.center_screen(800, 480, self.tk))
         self.tk.resizable(False, False)
+        
+        self.list_file = tkinter.Listbox(self.tk, selectmode=tkinter.MULTIPLE)
+        self.list_file.pack(padx=10, pady=10, fill=tkinter.BOTH, expand=True)
+        
+        self.reload_listfile()
+    
+        self.list_file.bind("<<ListboxSelect>>", self.on_select)
+
+        # Open Button
+        open_button = tkinter.Button(self.tk, text="Open", command=self.open_file)
+        open_button.pack(side=tkinter.LEFT, padx=10, pady=10)
+        
+        # View Button
+        view_button = tkinter.Button(self.tk, text="View as text", command=self.view_file)
+        view_button.pack(side=tkinter.LEFT, padx=10, pady=10)
+
+        # Download Button
+        download_button = tkinter.Button(self.tk, text="Download", command=self.download_file)
+        download_button.pack(side=tkinter.LEFT, padx=10, pady=10)
+        
+        # Upload Button
+        upload_button = tkinter.Button(self.tk, text="Upload", command=self.upload_file)
+        upload_button.pack(side=tkinter.LEFT, padx=10, pady=10)
+        
+        # Delete Button
+        delete_button = tkinter.Button(self.tk, text="Delete", command=self.delete_file)
+        delete_button.pack(side=tkinter.LEFT, padx=10, pady=10)
+
+        # Reload Button
+        reload_button = tkinter.Button(self.tk, text="Reload", command=self.reload_listfile)
+        reload_button.pack(side=tkinter.LEFT, padx=10, pady=10)
         
         self.tk.mainloop()
     
     def init_data(self):
         self.username = lib.get_username()
         self.storage_data = lib.load_data()
+        self.selected_data = tkinter.StringVar()
         return
         
     def lock_obj(self, lst=[]):
@@ -90,7 +258,7 @@ class main:
         for i in lst:
             i.config(state='disabled')
         while not self.is_done:
-            time.sleep(0.01)
+            lib.time.sleep(0.01)
         try:
             for i in lst:
                 i.config(state='normal')
@@ -100,16 +268,16 @@ class main:
         
     def check_token_thread(self):
         self.is_done = False
-        threading.Thread(target=self.lock_obj, args=([self.entry_token, self.button_token],)).start()
-        threading.Thread(target=self.check_token).start()
+        lib.threading.Thread(target=self.lock_obj, args=([self.entry_token, self.button_token],)).start()
+        lib.threading.Thread(target=self.check_token).start()
         return
     
     def check_token(self):
         self.textbox.write('>> Login account....')
-        #time.sleep(1)
+        #lib.time.sleep(1)
         if lib.check_token_github(self.token.get()):
             self.textbox.write(">> Getting account information....")
-            #time.sleep(1)
+            #lib.time.sleep(1)
             self.init_data()
             self.tk.quit()
             self.is_done = True
