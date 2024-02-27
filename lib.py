@@ -105,8 +105,8 @@ def check_token_github(token):
         data.username = query['login']
         data.token = token
     except KeyError:
-        debug("Token Error!")
-        return False
+        debug("Token Error! [message: {message}]".format(message = query['message']), query)
+        return query['message']
     
     if check_repo_exist():
         debug("Repo exist!")
@@ -210,12 +210,11 @@ def rename_filename(file_name):
     for char in str(file_name):
         if char == ' ':
             char = '.'
-        elif char in ['(', ')', '|', '\\', '/', '"', '[', ']', '{', '}', ',', '\'', ';', '`', '~']:
+        elif char in ['(', ')', '|', '\\', '/', '"', '[', ']', '{', '}', ',', ';', '`', '~']:
             continue
         elif char not in tmp_lst:
             char = '.'
         new_name = new_name + char
-
     return new_name
     
 def update_data(type_, file_name, tag_name = None):
@@ -237,7 +236,8 @@ def update_data(type_, file_name, tag_name = None):
             return False
         elif info == -1:
             debug("File not found [{file}]".format(file = file_name))
-            update_data('del', file_name)
+            if (tag_name == "hostfile"):
+                update_data('del', file_name)
             return False
 
         tmp_js_file['count'] = 1
@@ -256,22 +256,6 @@ def update_data(type_, file_name, tag_name = None):
         tmp_json['file'][str(file_name)] = json.dumps(tmp_js_file)
         set_data(tmp_json)
 
-        # for i in range(0, len(path), 1):
-        #     if not str(path[i]):
-        #         break
-        #     tmp_str = tmp_str + "['" + str(path[i]) + "']"
-        #     txt = tmp_str + " = {{'{0}': ''}}".format(path[i])
-        #     print(txt)
-        #     exec(txt)
-        # txt = tmp_str + "['{}'] = {}".format(query[0], str(json.dumps({
-        #          'count': '1',
-        #          'info': {
-        #             '1': 'https://raw.githubusercontent.com/{{}}/{{}}/main/|{}|{}'.format(query[1], query[2]),
-        #          }
-        # }).encode('utf8'))[1:])
-        # print(txt)
-        # exec(txt)
-        
     elif str(type_) == 'del':
         try:
             del tmp_json['file'][file_name]
@@ -343,7 +327,8 @@ def get_data_from_release(file_name, tag_name = None) -> list:
     
     if id_file == -1:
         debug("File not found [{file}]".format(file = file_name))
-        update_data('del', file_name)
+        if (tag_name == "hostfile"):
+            update_data('del', file_name)
         return [404, b'']
     elif (id_file != False):
         id_file = id_file['id']

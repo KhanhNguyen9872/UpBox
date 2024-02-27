@@ -200,14 +200,6 @@ class main:
         return
         
     def main_program(self):
-        ## main
-        # release_id = lib.create_release("1")
-        # lib.upload_file_release("data.py", release_id)
-        # lib.delete_release("1")
-        # lib.delete_tag("1")
-        # release_id = lib.create_release()
-        # lib.upload_file_release("data.py", release_id)
-        # lib.update_data('del', "data.py")
         self.tk = tkinter.Tk()
         self.tk.title(lib.program_name())
         self.tk.geometry(self.center_screen(800, 480, self.tk))
@@ -275,15 +267,20 @@ class main:
     def check_token(self):
         self.textbox.write('>> Login account....')
         #lib.time.sleep(1)
-        if lib.check_token_github(self.token.get()):
+        var = lib.check_token_github(self.token.get())
+        if var == True:
             self.textbox.write(">> Getting account information....")
             #lib.time.sleep(1)
             self.init_data()
             self.tk.quit()
             self.is_done = True
             del self.textbox
-        else:
+        elif var == False:
             self.textbox.write('>> Token ERROR!')
+            self.is_done = True
+            return False
+        else:
+            self.textbox.write('>> Token ERROR! Message: {message}'.format(message = var))
             self.is_done = True
             return False
         return True
