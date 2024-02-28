@@ -371,7 +371,7 @@ def load_data():
         set_data(json.loads(query[1]))
     return json.loads(query[1])
 
-def upload_file_release(path_file, id = None):
+def upload_file_release(path_file, id = None) -> bool:
     if (id == None):
         id = check_release_exist("hostfile")
         if (id == False):
@@ -386,6 +386,14 @@ def upload_file_release(path_file, id = None):
     headers['Content-Type'] = "application/octet-stream"
     __file__ = open(path_file, 'rb')
     file_name = "/".join(path_file.split("\\")).split("/")[-1]
+    # check exist
+    release_id = check_release_exist()
+    if release_id == False:
+        release_id = create_release()
+    if (get_info_file_release(rename_filename(file_name), release_id) != -1):
+        debug("Cannot upload! file exists")
+        return False
+    
     query = requests.post(
         'https://uploads.github.com/repos/{user}/{repo}/releases/{release_id}/assets?name={file_name}'.format(user = data.username, repo = data.main_repo(), release_id = id, file_name = file_name), 
         headers = headers,
@@ -406,7 +414,9 @@ def upload_file_release(path_file, id = None):
     debug("Upload release error!", str(query.text))
     return False
 
-def check_release_exist(tag_name) -> int:
+def check_release_exist(tag_name = None) -> int:
+    if tag_name == None:
+        tag_name = "hostfile"
     # check release exist
     query = requests.get(
         'https://api.github.com/repos/{user}/{repo}/releases/tags/{tag}'.format(user = data.username, repo = data.main_repo(), tag = tag_name), 

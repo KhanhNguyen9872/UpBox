@@ -16,16 +16,19 @@ except (ImportError, ModuleNotFoundError):
 class TextBox:
     def __init__(self, textbox):
         self.textbox = textbox
+        return
     def write(self, text):
         self.textbox.config(state = 'normal')
         self.textbox.delete(1.0,'end')
         self.textbox.insert(1.0, text)
         self.textbox.config(state = 'disabled')
+        return
     def append(self, text):
         self.textbox.config(state = 'normal')
         self.textbox.insert('end', text)
         self.textbox.config(state = 'disabled')
         self.textbox.see('end')
+        return
 
 class main:
     def __init__(self):
@@ -36,6 +39,7 @@ class main:
         self.get_token()
         self.tk.destroy()
         self.main_program()
+        return
         
     def get_token(self):
         self.tk = tkinter.Tk()
@@ -78,6 +82,7 @@ class main:
         # Lock current tkinter window
         # self.tk.attributes('-disabled', True)
         self.tk.mainloop()
+        return
         
     def get_items(self, event):
         selected_indices = self.list_file.curselection()
@@ -134,11 +139,23 @@ class main:
         else:
             return False
         
+    def askYesorNo(self, title, text) -> bool:
+        answer = messagebox.askquestion(title, text).lower()
+        if answer == "yes":
+            return True
+        else:
+            return False
+        
     def upload_progress(self, file):
         if file:
             file_name = "/".join(file.split("\\")).split("/")[-1]
-            lib.upload_file_release(file)
-            lib.update_data("add", file_name)
+            self.textbox_status.write("Uploading {file}...".format(file = file_name))
+            if lib.upload_file_release(file):
+                lib.update_data("add", file_name)
+                self.textbox_status.write("Uploaded {file}".format(file = file_name))
+            else:
+                messagebox("Upload Error", "Cannot upload file!")
+                self.textbox_status.write("Failed")
             self.reload_listfile()
         return
         
@@ -149,14 +166,17 @@ class main:
         return
     
     def delete_file(self):
-        listFile = self.selected_data.get().split(",")
-        for item in listFile:
-            item = "-".join(item.split("-")[1:])[1:]
-            if item:
-                lib.remove_file_release(item)
-                lib.update_data('del', item)
-                self.reload_listfile()
-        
+        if self.askYesorNo("Delete file", "Do you want to delete all the files you selected?"):
+            listFile = self.selected_data.get().split(",")
+            for item in listFile:
+                item = "-".join(item.split("-")[1:])[1:]
+                if item:
+                    lib.remove_file_release(item)
+                    lib.update_data('del', item)
+                    self.reload_listfile()
+        self.reload_listfile()
+        return
+
     def download_file(self):
         path = self.choose_folder()
         if (path != False):
@@ -164,18 +184,23 @@ class main:
             for item in fullItems:
                 item = "-".join(item.split("-")[1:])[1:]
                 if item:
+                    self.textbox_status.write("Downloading {file}...".format(file = item))
                     data = lib.get_data_from_release(item)
                     if (data[0] == 404):
                         return
                     open("{path}/{item}".format(path = path, item = item), "wb").write(data[1])
         self.reload_listfile()
+        self.textbox_status.write("Downloaded")
         return
 
     def openFileCMD(self, item):
+        self.textbox_status.write("Get data {file}...".format(file = item))
         data = lib.get_data_from_release(item)
         if (data[0] == 404):
+            self.textbox_status.write("Network Error {file}...".format(file = item))
             return
         
+        self.textbox_status.write("Opening {file}...".format(file = item))
         path = "{tmp}\\{folder}".format(tmp = lib.tmp_path, folder = lib.random_str(48))
         lib.os.mkdir(path)
         open("{path}\\{item}".format(path = path, item = item), 'wb').write(data[1])
@@ -185,9 +210,13 @@ class main:
         return
             
     def showTextBox(self, item):
+        self.textbox_status.write("Get data {file}...".format(file = item))
         data = lib.get_data_from_release(item)
         if (data[0] == 404):
             data[1] == "Network ERROR!"
+            self.textbox_status.write("Network Error {file}...".format(file = item))
+        else:
+            self.textbox_status.write("Completed {file}...".format(file = item))
         
         root = tkinter.Tk()
         root.title(item)
@@ -203,8 +232,10 @@ class main:
         text_area.config(state='disabled')
 
         root.mainloop()
+        return
         
     def reload_listfile(self):
+        self.textbox_status.write("Reloading...")
         self.list_file.delete(0, tkinter.END)
         lst = lib.get_list_file()
         lib.debug(lib.get_data())
@@ -214,6 +245,7 @@ class main:
             if(lst[name] == "file"):
                 name = str(round(int(lib.json.loads(lib.get_data()['file'][name])['info']['0'].split("|")[2]) / 1024, 2)) + " kb - " + name
                 self.list_file.insert(tkinter.END, name)
+        self.textbox_status.write("Reload completed")
         return
         
     def main_program(self):
@@ -224,8 +256,6 @@ class main:
         
         self.list_file = tkinter.Listbox(self.tk, selectmode=tkinter.MULTIPLE)
         self.list_file.pack(padx=10, pady=10, fill=tkinter.BOTH, expand=True)
-        
-        self.reload_listfile()
     
         self.list_file.bind("<<ListboxSelect>>", self.on_select)
 
@@ -253,7 +283,19 @@ class main:
         reload_button = tkinter.Button(self.tk, text="Reload", command=self.reload_listfile)
         reload_button.pack(side=tkinter.LEFT, padx=10, pady=10)
         
+        #
+        textbox_token = tkinter.Text(self.tk, font=("Arial", 12), width = 45, height=1)
+        textbox_token.config(state='disabled')
+        textbox_token.pack(side=tkinter.RIGHT, padx=10, pady=10)
+        
+        # assign
+        self.textbox_status = TextBox(textbox_token)
+        self.textbox_status.write("Nothing here")
+        
+        self.reload_listfile()
+        
         self.tk.mainloop()
+        return
     
     def init_data(self):
         self.username = lib.get_username()
